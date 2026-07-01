@@ -90,6 +90,8 @@ search(body_contains="invoice", date_from="2025-01-01", date_to="2025-06-01")
 
 IMAP servers with full-text search indexing (Gmail, Outlook) handle body search server-side. Servers without it (Posteo, many self-hosted) silently return 0 results. mailprobe's hybrid approach works with both.
 
+Body matching downloads each candidate message, so it scans newest-first and stops after `max_scan` messages (default 2000), returning `scan_truncated: true` when it stops early. Narrow with `date_from`/`date_to` or `folders` to cover older mail without hitting the cap.
+
 ## License
 
 MIT

@@ -23,6 +23,7 @@ def search(
     date_to: str | None = None,
     folders: list[str] | None = None,
     limit: int = 50,
+    max_scan: int = 2000,
     account: str | None = None,
 ) -> dict[str, Any]:
     """Search emails with hybrid full-text body search.
@@ -30,6 +31,10 @@ def search(
     Uses server-side IMAP filtering for metadata (date, subject, from, to) and
     client-side filtering for body content. Works reliably on servers without
     full-text search indexing (e.g., Posteo).
+
+    Body matching downloads candidate messages newest-first and stops after
+    max_scan messages. If scan_truncated is true, older mail was not reached —
+    narrow with date_from/date_to or folders to cover it.
 
     Args:
         body_contains: Text to find in email body (client-side, case-insensitive).
@@ -40,6 +45,7 @@ def search(
         date_to: End date exclusive (ISO: YYYY-MM-DD).
         folders: Specific folders to search. Default: all folders.
         limit: Maximum results (default: 50).
+        max_scan: Maximum messages to download and scan (default: 2000).
         account: Account name for multi-account setups.
     """
     acc = get_account(account)
@@ -53,12 +59,14 @@ def search(
         date_to=date_to,
         folders=folders,
         limit=limit,
+        max_scan=max_scan,
     )
     return {
         "emails": [_summary_to_dict(e) for e in result.emails],
         "total_scanned": result.total_scanned,
         "folders_searched": result.folders_searched,
         "search_time_seconds": result.search_time_seconds,
+        "scan_truncated": result.scan_truncated,
     }
 
 

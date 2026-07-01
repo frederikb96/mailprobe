@@ -49,6 +49,7 @@ class SearchResult:
     total_scanned: int
     folders_searched: list[str]
     search_time_seconds: float
+    scan_truncated: bool = False
 
 
 def _connect(account: ImapAccount) -> MailBox:
@@ -80,11 +81,18 @@ def search_emails(
     date_to: str | None = None,
     folders: list[str] | None = None,
     limit: int = 50,
+    max_scan: int = 2000,
 ) -> SearchResult:
     """Search emails with hybrid server+client-side filtering.
 
     Server-side IMAP SEARCH handles metadata filters (date, subject, from, to).
     Client-side filtering handles body content for servers without FTS indexing.
+
+    Body content matching downloads each candidate message, so an unnarrowed
+    body search would otherwise scan the entire mailbox. Messages are fetched
+    newest-first in batches and the scan stops after max_scan messages, setting
+    scan_truncated on the result. Narrow with date_from/date_to or folders to
+    cover older mail.
 
     Args:
         account: IMAP account to use.
@@ -96,6 +104,7 @@ def search_emails(
         date_to: End date exclusive, ISO format YYYY-MM-DD.
         folders: Specific folders to search. None searches all.
         limit: Maximum results to return.
+        max_scan: Maximum messages to download and scan before stopping.
 
     Returns:
         SearchResult with matching emails and search metadata.
@@ -104,6 +113,7 @@ def search_emails(
     results: list[EmailSummary] = []
     total_scanned = 0
     searched_folders: list[str] = []
+    truncated = False
 
     with _connect(account).login(account.user, account.password) as mb:
         folder_list = folders if folders is not None else [f.name for f in mb.folder.list()]
@@ -123,7 +133,10 @@ def search_emails(
                 date_to=date_to,
             )
 
-            for msg in mb.fetch(criteria, mark_seen=False):
+            for msg in mb.fetch(criteria, mark_seen=False, bulk=50, reverse=True):
+                if total_scanned >= max_scan:
+                    truncated = True
+                    break
                 total_scanned += 1
 
                 if body_contains:
@@ -147,7 +160,7 @@ def search_emails(
                 if len(results) >= limit:
                     break
 
-            if len(results) >= limit:
+            if len(results) >= limit or truncated:
                 break
 
     return SearchResult(
@@ -155,6 +168,7 @@ def search_emails(
         total_scanned=total_scanned,
         folders_searched=searched_folders,
         search_time_seconds=round(time.time() - start, 2),
+        scan_truncated=truncated,
     )
 
 

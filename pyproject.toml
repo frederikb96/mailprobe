@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mailprobe"
-version = "0.1.0"
+version = "0.2.0"
 description = "IMAP email MCP server with hybrid full-text body search"
 readme = "README.md"
 license = "MIT"

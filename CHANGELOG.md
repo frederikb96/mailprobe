@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-07-01
+
+### Changed
+
+- Body content search now fetches messages newest-first in batches and stops
+  after `max_scan` messages (default 2000), returning `scan_truncated` in the
+  result. Previously an unnarrowed body search downloaded every message in
+  every folder one at a time, which could run for many minutes on large
+  mailboxes. Narrow with `date_from`/`date_to` or `folders` to cover older mail.
+
 ## [0.1.0] - 2026-02-28
 
 ### Added
